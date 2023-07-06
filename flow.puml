@@ -1,0 +1,15 @@
+@startuml
+DOM -> Javascript: onClick/onSend/onEvent...
+Javascript -> Javascript: send(messageType + messagePayload)
+Javascript -> DOM: load last render state from html
+DOM -> Javascript: html meta header (id="_state") contains JSON
+Javascript -> Server: HTTP POST (fetch API) \nFormData(last render state + msgType + messagePayload)
+Server -> Server: unmarshal last render state
+Server -> Server: apply Message (Type + Payload) = new render state
+Server -> Server: render template (new render state)
+Server -> Javascript: HTTP HTML Response or virtual redirect
+Javascript --> Server: if redirect: fetch again (only with redirect state, if any)
+Server --> Javascript: if redirect: HTTP HTML Response
+Javascript -> Javascript: calculate DOM delta (Idiomorph)
+Javascript -> DOM: apply delta, CSS transitions etc.
+@enduml
