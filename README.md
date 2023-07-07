@@ -17,6 +17,91 @@ This library has been influenced by the following patterns, theories and technol
 
 ![flow](flow.svg)
 
+## minimal example
+
+greeting.go
+```go
+package main
+
+import (
+	"fmt"
+	"github.com/worldiety/hg"
+	"github.com/worldiety/hg-example/internal/helloworld"
+	"github.com/worldiety/hg-example/internal/helloworld/web"
+	"net/http"
+)
+
+type PageState struct {
+	Title  string
+	Greets string
+}
+
+func main() {
+	fmt.Println("starting")
+	page := hg.Handler(
+		hg.MustParse[PageState](
+			hg.FS(web.Templates),
+			hg.Execute("index"),
+			hg.NamedFunc("page", func() string { return "greeting" }),
+		),
+		hg.OnRequest(
+			func(r *http.Request, model PageState) PageState {
+				model.Title = "greetings from hg"
+				model.Greets = helloworld.SayHello("Torben")
+				return model
+			},
+		),
+	)
+	http.ListenAndServe("localhost:8080", page)
+}
+```
+
+web.go
+```go
+package web
+
+import "embed"
+
+//go:embed  pages/*.gohtml index/*.gohtml
+var Templates embed.FS
+
+```
+
+index.gohtml
+```html
+{{define "index"}}
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta id="_state" content='{{toJSON .}}'>
+        <meta charset="UTF-8">
+        <meta name="viewport"
+              content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+        <title>{{.Title}}</title>
+        <script src="/assets/tailwind.js"></script>
+        <script src="/assets/idiomorph.js"></script>
+
+        <script src="/assets/gohtml.js" type="text/javascript"></script>
+    </head>
+
+
+    
+    <body class="h-screen w-screen absolute bg-gray-200 dark:bg-gray-900">
+    {{evaluate page .}}
+    </body>
+    </html>
+{{end}}
+```
+
+greeting.gohtml
+
+```html
+{{define "greeting"}}
+    <p>Just saying {{.Greets}}</p>
+{{end}}
+
+```
+
 ## Why?
 
 At first, encouraging SSR in 2023 may seem to be out of time, however there is the interesting trend of all large SPA frameworks, to provide SSR concepts anyway, where the page is pre-rendered and delivered and hydrated at the client side, to get the best of both worlds.

@@ -108,7 +108,7 @@ func Parse[Model any](options ...TplOption) (ViewFunc[Model], error) {
 	parser.tpls.Funcs(parser.funcs)
 
 	for _, fsys := range parser.fsyss {
-		_, err := parser.tpls.ParseFS(fsys, "*.gohtml")
+		_, err := parser.tpls.ParseFS(fsys, "*/**.gohtml", "*/***.gohtml", "**/*.gohtml")
 		if err != nil {
 			return nil, fmt.Errorf("cannot parse *.gohtml files: %w", err)
 		}
