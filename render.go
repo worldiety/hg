@@ -60,10 +60,10 @@ func (h rHnd[Model]) handle(writer http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	// usually a POST and only form-data allowed for state and event submission (and/or an actual form)
+	// usually a POST and only form-Data allowed for state and event submission (and/or an actual form)
 	mtype, _, _ := mime.ParseMediaType(request.Header.Get("Content-Type"))
-	if mtype != "multipart/form-data" {
-		slog.Error("hg expected form-data", slog.String("Content-Type", mtype))
+	if mtype != "multipart/form-Data" {
+		slog.Error("hg expected form-Data", slog.String("Content-Type", mtype))
 		writer.WriteHeader(http.StatusBadRequest)
 		return
 	}
@@ -102,7 +102,7 @@ func (h rHnd[Model]) handle(writer http.ResponseWriter, request *http.Request) {
 		state = h.onRequest(request, state)
 	}
 
-	// invoke the handler and process event data / payload
+	// invoke the handler and process event Data / payload
 	if hnd != nil {
 		// hnd is nil, if we got a !refresh
 		s, err := hnd.Transform(state, request)
@@ -197,7 +197,7 @@ func Case[Model, Msg any](alias string, update UpdateFunc[Model, Msg]) MsgHandle
 		// either we have eventData, or we assume a full form (or nothing)
 		if eventDataText := r.PostFormValue("_eventData"); eventDataText != "" {
 			if err := json.Unmarshal([]byte(eventDataText), &msg); err != nil {
-				return model, fmt.Errorf("cannot unmarshal event data form field: %w", err)
+				return model, fmt.Errorf("cannot unmarshal event Data form field: %w", err)
 			}
 		} else {
 			if err := form.Unmarshal(&msg, r); err != nil {
@@ -211,7 +211,7 @@ func Case[Model, Msg any](alias string, update UpdateFunc[Model, Msg]) MsgHandle
 	return decoder
 }
 
-// CaseWithQualifier is like [Case] but uses as alias the package path and the type name of the Message.
+// CaseWithQualifier is like [Case] but uses as alias the package path and the type Name of the Message.
 func CaseWithQualifier[Model, Msg any](update UpdateFunc[Model, Msg]) MsgHandler[Model] {
 	var msg Msg
 	t := reflect.TypeOf(msg)
