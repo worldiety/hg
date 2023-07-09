@@ -12,95 +12,61 @@ This library has been influenced by the following patterns, theories and technol
 * The [Vue hot reload](https://vue-loader.vuejs.org/guide/hot-reload.html) (see the hotReload js helper function and [reflex](https://github.com/cespare/reflex) or an [IntelliJ-Plugin](https://youtrack.jetbrains.com/issue/GO-11119#focus=Comments-27-4901631.0-0))
 * Spring Boot [Thymeleaf Redirect](https://www.baeldung.com/spring-redirect-and-forward) (see `hg.Redirect`)
 * [Blazor](https://learn.microsoft.com/de-de/aspnet/core/blazor/?view=aspnetcore-7.0) (but hg is cheaper and stateless. Instead of allocating server resources and bind them to permanent websocket connections, the page state is offloaded and embedded into the delivered page)
+* The [htmx](https://htmx.org/docs/#introduction) declarative annotations.
 
 ## Conceptual data flow
 
 ![flow](flow.svg)
 
-## minimal example
+## Introduced tags
 
-greeting.go
-```go
-package main
+Like htmx, hg provides a bunch of tokens to annotate the html to make it interactive.
 
-import (
-	"fmt"
-	"github.com/worldiety/hg"
-	"github.com/worldiety/hg-example/internal/helloworld"
-	"github.com/worldiety/hg-example/internal/helloworld/web"
-	"net/http"
-)
+### hg-hotreload
+hg supports hot-reloading through a long-poll mechanism.
+To enable, set the `hg-hotreload` attribute to the body tag.
 
-type PageState struct {
-	Title  string
-	Greets string
-}
-
-func main() {
-	fmt.Println("starting")
-	page := hg.Handler(
-		hg.MustParse[PageState](
-			hg.FS(web.Templates),
-			hg.Execute("index"),
-			hg.NamedFunc("page", func() string { return "greeting" }),
-		),
-		hg.OnRequest(
-			func(r *http.Request, model PageState) PageState {
-				model.Title = "greetings from hg"
-				model.Greets = helloworld.SayHello("Torben")
-				return model
-			},
-		),
-	)
-	http.ListenAndServe("localhost:8080", page)
-}
-```
-
-web.go
-```go
-package web
-
-import "embed"
-
-//go:embed  pages/*.gohtml index/*.gohtml
-var Templates embed.FS
-
-```
-
-index.gohtml
+Example, which polls the default endpoint `/version/poll`:
 ```html
-{{define "index"}}
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta id="_state" content='{{toJSON .}}'>
-        <meta charset="UTF-8">
-        <meta name="viewport"
-              content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
-        <title>{{.Title}}</title>
-        <script src="/assets/tailwind.js"></script>
-        <script src="/assets/idiomorph.js"></script>
-
-        <script src="/assets/gohtml.js" type="text/javascript"></script>
-    </head>
-
-
-    
-    <body class="h-screen w-screen absolute bg-gray-200 dark:bg-gray-900">
-    {{evaluate page .}}
-    </body>
-    </html>
-{{end}}
+<body hg-hotreload>
+    {{template "page" .}}
+</body>
 ```
 
-greeting.gohtml
-
+Example, which polls a custom endpoint:
 ```html
-{{define "greeting"}}
-    <p>Just saying {{.Greets}}</p>
-{{end}}
-
+<body hg-hotreload="/my/custom/poll/handler">
+    {{template "page" .}}
+</body>
 ```
+
+### hg-event, hg-data and hg-trigger
+
+To re-render a page, you have to tell hg what and when to send a message.
+So first, take any Element and put an hg-event attribute on it, which must contain a string which matches the registered case in your page handler.
+Internally, a normal javascript event listener is registered using the type declared in the attribute hg-trigger.
+
+_Note:_ This behavior will change slightly to support more complex cases like delays and message cancellations.
+
+In your page handler configure your message and model transformation:
+```go
+hg.Update(hg.Case("add", func(model PageState, msg AddEvent) PageState {
+    model.Count += int(msg)
+    return model
+}))
+```
+
+Trigger the event as follows in your html template:
+```html
+<button hg-event="add" hg-data="2" hg-trigger="click">Your clicked sum is {{.Count}}</button>
+```
+
+Note, that the hg-event and hg-trigger attributes are obligatory.
+The hg-data attribute is optional and depends on your interpretation of the message.
+
+## Example
+
+Take a look at the standalone [hg example project](https://github.com/worldiety/hg-example).
 
 ## Why?
 

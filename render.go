@@ -62,7 +62,7 @@ func (h rHnd[Model]) handle(writer http.ResponseWriter, request *http.Request) {
 
 	// usually a POST and only form-Data allowed for state and event submission (and/or an actual form)
 	mtype, _, _ := mime.ParseMediaType(request.Header.Get("Content-Type"))
-	if mtype != "multipart/form-Data" {
+	if mtype != "multipart/form-data" {
 		slog.Error("hg expected form-Data", slog.String("Content-Type", mtype))
 		writer.WriteHeader(http.StatusBadRequest)
 		return

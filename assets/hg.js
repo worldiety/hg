@@ -19,7 +19,7 @@ function hotReload(url) {
             setTimeout(curry, 1000); // try reconnect with a delay
             console.log("retry", myurl)
         }).catch(function (err) {
-            awaitService(myurl).then(()=>{
+            awaitService(myurl).then(() => {
                 refresh();
                 curry();
             });
@@ -37,11 +37,11 @@ function hotReload(url) {
  */
 function awaitService(url) {
     return fetch(url + "?ping").then(r => r.status === 200).catch(e => {
-        return wait(500).then(()=>awaitService(url))
+        return wait(500).then(() => awaitService(url))
     })
 }
 
-function wait(delay){
+function wait(delay) {
     return new Promise((resolve) => setTimeout(resolve, delay));
 }
 
@@ -108,7 +108,13 @@ function sendWithState(state, msgType, msgData) {
         console.log("sending form", data)
     } else {
         data = new FormData();
-        data.set("_eventData", JSON.stringify(msgData));
+        let evtData = msgData
+        /* the js type system is just broken
+         if (!(evtData instanceof String)){
+             evtData = JSON.stringify(msgData)
+             console.log("converted msg data into json string")
+         }*/
+        data.set("_eventData", evtData);
     }
 
     data.set("_state", state);
@@ -153,10 +159,16 @@ function handleFetch(promise) {
             return null
         }
 
-        console.log("4")
+        console.log("dispatching listener cleanup")
+        let event = new Event("hg-destroy", {bubbles: true});
+        document.dispatchEvent(event);
+
+        // apply DOM delta
         let doc = new DOMParser().parseFromString(msgRes.content, "text/html")
         Idiomorph.morph(document.documentElement, doc.documentElement, {head: {style: 'morph'}})
 
+        // we now have a mixture of old and new nodes, so register everything again
+        registerTriggers()
 
     }).catch(function (err) {
         console.warn('failed to fetch', err);
@@ -206,4 +218,80 @@ window.addEventListener("popstate", (event) => {
     }
 })
 
-console.log("hg (htmlgo) is here");
+function initHotReload() {
+    if (document.body.hasAttribute("hg-hotreload")) {
+        let link = document.body.getAttribute("hg-hotreload")
+        if (link === "") {
+            link = "/version/poll"
+        }
+        console.log("hot-reload polling from ", link)
+        hotReload(link)
+    }
+}
+
+/**
+ * registerTriggers loops over all body elements recursively and looks for
+ * defined hg-event and trigger attributes and registers the according trigger event.
+ */
+function registerTriggers() {
+    visitElements(document.body, function (elem) {
+        const eventName = elem.getAttribute("hg-event")
+        if (eventName === "") {
+            console.warn("element has declared hg-event but value is empty")
+            return
+        }
+
+        const trigger = elem.getAttribute("hg-trigger")
+        if (trigger === "") {
+            console.warn("element has declared event '", eventName, "' but requires trigger")
+            return
+        }
+
+        const dataAttr = elem.getAttribute("hg-data")
+
+        let listener = evt => {
+            evt.preventDefault()
+            let data = dataAttr
+            if (data === "" && elem instanceof HTMLFormElement) {
+                data = elem
+            }
+
+            send(eventName, data)
+        }
+
+        elem.addEventListener(trigger, listener)
+
+        let destructor = evt => {
+            elem.removeEventListener(trigger, listener)
+            document.removeEventListener("hg-destroy", destructor)
+        }
+
+        document.addEventListener("hg-destroy", destructor)
+    })
+
+}
+
+/**
+ *
+ * @param {Element} root
+ * @param {function(Element)} callback
+ */
+function visitElements(root, callback) {
+    callback(root)
+    let children = root.children
+    for (let i = 0; i < children.length; i++) {
+        visitElements(children.item(i), callback)
+    }
+}
+
+function init() {
+    console.log("hg (htmlgo) is here");
+    initHotReload()
+    registerTriggers()
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    init()
+});
+
+
