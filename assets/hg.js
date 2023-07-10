@@ -272,7 +272,7 @@ function hgRegisterNav(elem) {
  * @param {Element} elem
  */
 function hgRegisterEvent(elem) {
-    const eventName = elem.getAttribute("hg-event")
+    const eventName = elem.getAttribute("hg-event");
     if (eventName == null) {
         return
     }
@@ -282,32 +282,57 @@ function hgRegisterEvent(elem) {
         return
     }
 
-    const trigger = elem.getAttribute("hg-trigger")
+    const trigger = elem.getAttribute("hg-trigger").trim();
     if (trigger === "") {
-        console.warn("element has declared event '", eventName, "' but requires trigger")
+        console.warn("element has declared event '", eventName, "' but requires trigger");
         return
     }
 
-    const dataAttr = elem.getAttribute("hg-data")
+    const dataAttr = elem.getAttribute("hg-data");
 
     let listener = evt => {
-        evt.preventDefault()
-        let data = dataAttr
-        if (data === "" && elem instanceof HTMLFormElement) {
-            data = elem
+        if (evt != null){
+            evt.preventDefault();
         }
 
-        send(eventName, data)
+        let data = dataAttr
+        if (data === "" && elem instanceof HTMLFormElement) {
+            data = elem;
+        }
+
+        send(eventName, data);
     }
 
-    elem.addEventListener(trigger, listener)
+    const regexEveryXs = /every\s\d+s/;
+    if (trigger.match(regexEveryXs) != null){
+        // case (every Xs):
+        const regexNum = /\d/;
+        const secStr = trigger.match(regexNum)[0];
+        const ms = parseInt(secStr) * 1000;
+        let destroyed = false;
+        const hnd = setInterval(listener, ms);
 
-    let destructor = evt => {
-        elem.removeEventListener(trigger, listener)
-        document.removeEventListener("hg-destroy", destructor)
+        let destructor = evt => {
+            destroyed = true;
+            clearInterval(hnd);
+            document.removeEventListener("hg-destroy", destructor);
+        }
+
+        document.addEventListener("hg-destroy", destructor);
+
+    }else{
+        // default:
+        elem.addEventListener(trigger, listener);
+
+        let destructor = evt => {
+            elem.removeEventListener(trigger, listener);
+            document.removeEventListener("hg-destroy", destructor);
+        }
+
+        document.addEventListener("hg-destroy", destructor);
     }
 
-    document.addEventListener("hg-destroy", destructor)
+
 }
 
 /**

@@ -64,6 +64,22 @@ Trigger the event as follows in your html template:
 Note, that the hg-event and hg-trigger attributes are obligatory.
 The hg-data attribute is optional and depends on your interpretation of the message.
 
+### Triggers
+
+Currently, the following triggers are supported.
+
+#### Default trigger events
+By default, any trigger is treated as a javascript event type and registered as such.
+
+#### Polling
+You can trigger an event automatically, by using the `every Xs` syntax.
+Note the magic `!refresh` event, which just issues an re-render request for the current page state.
+This issues no additional page model update.
+
+```html
+<p hg-event="!refresh" hg-trigger="every 5s">Current Time: {{.Time}}</p>
+```
+
 ### hg-href
 
 To trigger the DOM merging for regular navigations, you can add the _hg-href_ attribute to any element.
