@@ -204,17 +204,9 @@ console.log("pushed initial history", location.href);
 window.addEventListener("popstate", (event) => {
     console.log("pop state");
     if (event.state) {
-        fetch(event.state.url,).then(function (response) {
-
-            return response.text();
-        }).then(function (html) {
-            let doc = new DOMParser().parseFromString(html, "text/html")
-            Idiomorph.morph(document.documentElement, doc.documentElement, {head: {style: 'morph'}})
-
-        }).catch(function (err) {
-            console.warn('failed to fetch', err);
-            showFatalError("failed processing state message", err);
-        });
+        handleFetch(fetch(window.location, {
+            method: "GET",
+        }))
     }
 })
 
@@ -235,40 +227,87 @@ function initHotReload() {
  */
 function registerTriggers() {
     visitElements(document.body, function (elem) {
-        const eventName = elem.getAttribute("hg-event")
-        if (eventName === "") {
-            console.warn("element has declared hg-event but value is empty")
-            return
-        }
-
-        const trigger = elem.getAttribute("hg-trigger")
-        if (trigger === "") {
-            console.warn("element has declared event '", eventName, "' but requires trigger")
-            return
-        }
-
-        const dataAttr = elem.getAttribute("hg-data")
-
-        let listener = evt => {
-            evt.preventDefault()
-            let data = dataAttr
-            if (data === "" && elem instanceof HTMLFormElement) {
-                data = elem
-            }
-
-            send(eventName, data)
-        }
-
-        elem.addEventListener(trigger, listener)
-
-        let destructor = evt => {
-            elem.removeEventListener(trigger, listener)
-            document.removeEventListener("hg-destroy", destructor)
-        }
-
-        document.addEventListener("hg-destroy", destructor)
+        hgRegisterEvent(elem)
+        hgRegisterNav(elem)
     })
 
+}
+
+/**
+ *
+ * @param {Element} elem
+ */
+function hgRegisterNav(elem) {
+    const navTarget = elem.getAttribute("hg-href")
+    if (navTarget == null) {
+        return
+    }
+
+    if (navTarget === "") {
+        console.warn("element has declared hg-href but value is empty")
+        return
+    }
+
+    let listener = evt => {
+        evt.preventDefault()
+        handleFetch(fetch(navTarget, {
+            method: "GET",
+        }))
+        history.pushState({url: navTarget}, "", navTarget);
+    }
+
+    const trigger = "click"
+    elem.addEventListener(trigger, listener)
+
+    let destructor = evt => {
+        elem.removeEventListener(trigger, listener)
+        document.removeEventListener("hg-destroy", destructor)
+    }
+
+    document.addEventListener("hg-destroy", destructor)
+}
+
+/**
+ *
+ * @param {Element} elem
+ */
+function hgRegisterEvent(elem) {
+    const eventName = elem.getAttribute("hg-event")
+    if (eventName == null) {
+        return
+    }
+
+    if (eventName === "") {
+        console.warn("element has declared hg-event but value is empty")
+        return
+    }
+
+    const trigger = elem.getAttribute("hg-trigger")
+    if (trigger === "") {
+        console.warn("element has declared event '", eventName, "' but requires trigger")
+        return
+    }
+
+    const dataAttr = elem.getAttribute("hg-data")
+
+    let listener = evt => {
+        evt.preventDefault()
+        let data = dataAttr
+        if (data === "" && elem instanceof HTMLFormElement) {
+            data = elem
+        }
+
+        send(eventName, data)
+    }
+
+    elem.addEventListener(trigger, listener)
+
+    let destructor = evt => {
+        elem.removeEventListener(trigger, listener)
+        document.removeEventListener("hg-destroy", destructor)
+    }
+
+    document.addEventListener("hg-destroy", destructor)
 }
 
 /**

@@ -64,6 +64,14 @@ Trigger the event as follows in your html template:
 Note, that the hg-event and hg-trigger attributes are obligatory.
 The hg-data attribute is optional and depends on your interpretation of the message.
 
+### hg-href
+
+To trigger the DOM merging for regular navigations, you can add the _hg-href_ attribute to any element.
+
+```html
+<button hg-href="/go/ahead?some=thing">Go ahead</button>
+```
+
 ## Example
 
 Take a look at the standalone [hg example project](https://github.com/worldiety/hg-example).
