@@ -185,7 +185,7 @@ func (g *defaultMsgDecoder[M]) Alias() string {
 // Case is invoked if the message alias is matched and tries to unmarshal the form value _eventData message into a new value
 // of type Msg. It then calls the UpdateFunc to transform the given Model into a new state.
 // To apply navigation, see also [Redirect].
-func Case[Model, Msg any](alias string, update UpdateFunc[Model, Msg]) MsgHandler[Model] {
+func Case[Model, Msg any](alias string, update UpdateFunc[Model, Msg]) RenderOption[Model] {
 	decoder := &defaultMsgDecoder[Model]{
 		alias:     alias,
 		maxMemory: 10 * 1024 * 1024,
@@ -208,11 +208,13 @@ func Case[Model, Msg any](alias string, update UpdateFunc[Model, Msg]) MsgHandle
 		return update(model, msg), nil
 	}
 
-	return decoder
+	return func(hnd *rHnd[Model]) {
+		hnd.decoders[decoder.Alias()] = decoder
+	}
 }
 
 // CaseWithQualifier is like [Case] but uses as alias the package path and the type Name of the Message.
-func CaseWithQualifier[Model, Msg any](update UpdateFunc[Model, Msg]) MsgHandler[Model] {
+func CaseWithQualifier[Model, Msg any](update UpdateFunc[Model, Msg]) RenderOption[Model] {
 	var msg Msg
 	t := reflect.TypeOf(msg)
 	alias := t.PkgPath() + "." + t.Name()
@@ -224,6 +226,9 @@ func CaseWithQualifier[Model, Msg any](update UpdateFunc[Model, Msg]) MsgHandler
 // This always happens, independently if a message has been sent.
 // Thus, this transformer is especially helpful to inject any transitional state, which cannot be
 // serialized, even things like contexts or use case services.
+//
+// There can be only one OnRequest update function.
+// The last call replaces the prior registered func.
 func OnRequest[Model any](f UpdReqFunc[Model]) RenderOption[Model] {
 	return func(hnd *rHnd[Model]) {
 		hnd.onRequest = f
@@ -231,7 +236,8 @@ func OnRequest[Model any](f UpdReqFunc[Model]) RenderOption[Model] {
 }
 
 // Update is the entry point to register a bunch of message handlers.
-// See also [Case].
+// See also [Case] and [CaseWithQualifier] for shortcuts.
+// Any already registered handlers (see Alias) are replaced.
 func Update[Model any](messages ...MsgHandler[Model]) RenderOption[Model] {
 	return func(hnd *rHnd[Model]) {
 		for _, msgDecoder := range messages {
