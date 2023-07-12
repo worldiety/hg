@@ -23,7 +23,7 @@ func (f ViewHtmlFunc[Model]) Handle(model Model) http.HandlerFunc {
 }
 
 // UpdateFunc mutates the model by applying the Msg and returning an altered Model.
-type UpdateFunc[Model, Msg any] func(model Model, msg Msg) Model
+type UpdateFunc[Model, Evt any] func(model Model, evt Evt) Model
 
 // RequestUpdateFunc mutates the model by decode and applying the msg and returning an altered Model.
 type RequestUpdateFunc[Model any] func(model Model, r *http.Request) (Model, error)
@@ -185,14 +185,14 @@ func (g *defaultMsgDecoder[M]) Alias() string {
 // Case is invoked if the message alias is matched and tries to unmarshal the form value _eventData message into a new value
 // of type Msg. It then calls the UpdateFunc to transform the given Model into a new state.
 // To apply navigation, see also [Redirect].
-func Case[Model, Msg any](alias string, update UpdateFunc[Model, Msg]) RenderOption[Model] {
+func Case[Model, Evt any](alias string, update UpdateFunc[Model, Evt]) RenderOption[Model] {
 	decoder := &defaultMsgDecoder[Model]{
 		alias:     alias,
 		maxMemory: 10 * 1024 * 1024,
 	}
 
 	decoder.onTransform = func(model Model, r *http.Request) (Model, error) {
-		var msg Msg
+		var msg Evt
 
 		// either we have eventData, or we assume a full form (or nothing)
 		if eventDataText := r.PostFormValue("_eventData"); eventDataText != "" {

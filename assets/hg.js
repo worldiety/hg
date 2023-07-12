@@ -100,9 +100,9 @@ function sendWithState(state, msgType, msgData) {
     if (msgData instanceof HTMLFormElement) {
         // if called inline, we have a global "event", which must be prevented for forms, otherwise it will
         // be sent twice and automatic one is invalid, due to missing state and msg information
-        if (event != null) {
+        /**if (event != null) {
             event.preventDefault();
-        }
+        }*/
 
         data = new FormData(msgData);
         console.log("sending form", data)
@@ -296,7 +296,7 @@ function hgRegisterEvent(elem) {
         }
 
         let data = dataAttr
-        if (data === "" && elem instanceof HTMLFormElement) {
+        if (data == null && elem instanceof HTMLFormElement) {
             data = elem;
         }
 
